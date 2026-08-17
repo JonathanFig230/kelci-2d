@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kelci Eats The World</title>
+<style>
+  :root {
+    --grass: #6abf5e;
+    --grass-dark: #5aab4f;
+    --panel-bg: #fdfaf0;
+    --panel-border: #41403c;
+    --accent: #ff9f43;
+    --sky: #7ec8e3;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: 'Courier New', Courier, monospace;
+    background: #1a1a1a;
+    overflow: hidden;
+    user-select: none;
+  }
+  .screen {
+    position: fixed; inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, var(--sky) 0%, #a3d9c9 55%, #6abf5e 100%);
+    color: #22301f;
+    text-align: center;
+    padding: 24px;
+    z-index: 10;
+  }
+  .screen.hidden { display: none; }
+  .title {
+    font-size: 54px;
+    font-weight: 900;
+    color: #fff;
+    -webkit-text-stroke: 3px #41403c;
+    paint-order: stroke fill;
+    letter-spacing: 1px;
+    margin: 0 0 6px;
+  }
+  .subtitle {
+    font-size: 15px;
+    color: #24331f;
+    background: var(--panel-bg);
+    border: 3px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 6px 16px;
+    margin-bottom: 34px;
+  }
+  .btn {
+    background: var(--accent);
+    color: #41403c;
+    border: 3px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 12px 26px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    margin: 0 8px;
+    box-shadow: 0 4px 0 #a85f13;
+  }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #a85f13; }
+  .btn.secondary { background: var(--panel-bg); box-shadow: 0 4px 0 #8a8a8a; }
+  .btn.secondary:active { box-shadow: 0 1px 0 #8a8a8a; }
+
+  .kelci-preview { image-rendering: pixelated; margin-bottom: 18px; }
+
+  #instructionsBox {
+    background: var(--panel-bg);
+    border: 4px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 20px 26px;
+    max-width: 560px;
+    max-height: 56vh;
+    overflow-y: auto;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.65;
+    margin-bottom: 22px;
+  }
+  #instructionsBox h3 { margin: 14px 0 4px; color: #a85f13; }
+  #instructionsBox h3:first-child { margin-top: 0; }
+
+  #gameScreen { padding: 0; background: none; z-index: 1; }
+  canvas#world { display: block; background: var(--grass); image-rendering: pixelated; }
+
+  #hud {
+    position: fixed;
+    top: 14px; left: 14px;
+    background: var(--panel-bg);
+    border: 3px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    min-width: 230px;
+    z-index: 5;
+    font-size: 12px;
+  }
+  #hud .name { font-weight: 700; font-size: 14px; color: #a85f13; }
+  #hud .tier { font-size: 12px; margin: 2px 0 6px; }
+  #hud .barTrack {
+    background: #d8d3c0;
+    border: 2px solid var(--panel-border);
+    border-radius: 5px;
+    height: 12px;
+    overflow: hidden;
+  }
+  #hud .barFill {
+    background: linear-gradient(90deg, #7ed957, #4fae3a);
+    height: 100%;
+    width: 0%;
+    transition: width 0.25s ease;
+  }
+  #hud .statline { margin-top: 6px; font-size: 11px; color: #444; }
+  #moodengBtn {
+    margin-top: 8px;
+    width: 100%;
+    background: var(--accent);
+    color: #41403c;
+    border: 2px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  #moodengBtn.mounted { background: #e8a6b0; }
+
+  #exitBtn {
+    position: fixed; top: 14px; right: 14px;
+    z-index: 5;
+    background: var(--panel-bg);
+    border: 3px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #8a8a8a;
+  }
+  #exitBtn:active { transform: translateY(3px); box-shadow: none; }
+
+  canvas#minimap {
+    position: fixed; bottom: 14px; right: 14px;
+    z-index: 5;
+    border: 3px solid var(--panel-border);
+    border-radius: 8px;
+    background: rgba(253,250,240,0.85);
+  }
+
+  #toast {
+    position: fixed;
+    top: 90px; left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: var(--panel-bg);
+    border: 3px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #a85f13;
+    z-index: 6;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: var(--panel-bg);
+    border: 4px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 24px 28px;
+    min-width: 300px;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .modal h2 { margin-top: 0; color: #a85f13; }
+  .modal p { font-size: 13px; line-height: 1.6; }
+
+  #touchpad {
+    position: fixed;
+    bottom: 20px; left: 20px;
+    z-index: 5;
+    display: none;
+  }
+  #touchpad.visible { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 4px; }
+  #touchpad button {
+    font-family: inherit; font-weight: 900; font-size: 16px;
+    background: var(--panel-bg); border: 3px solid var(--panel-border); border-radius: 6px;
+    cursor: pointer; opacity: 0.85;
+  }
+</style>
+</head>
+<body>
+
+<div class="screen" id="introScreen">
+  <canvas class="kelci-preview" id="introPreview" width="140" height="140"></canvas>
+  <div class="title">KELCI</div>
+  <div class="subtitle">eats the world</div>
+  <div>
+    <button class="btn" id="btnPlay">Play</button>
+    <button class="btn secondary" id="btnHowTo">How to Play</button>
+  </div>
+</div>
+
+<div class="screen hidden" id="instructionsScreen">
+  <div class="title" style="font-size:30px;">How to Play</div>
+  <div id="instructionsBox">
+    <h3>Goal</h3>
+    <p>Kelci starts out tiny. Walk into things smaller than her to eat them and grow. Keep growing until Kelci is big enough to eat <strong>the entire world</strong>.</p>
+    <h3>Controls</h3>
+    <p>Move with <strong>WASD</strong> or the <strong>Arrow Keys</strong> (or the on-screen pad on touch devices). Just walk into anything Kelci can eat — no extra button needed.</p>
+    <h3>Growing</h3>
+    <p>Every object has a size. Kelci can only eat things her size or smaller. Eating fills her growth bar; once it's full, she levels up, gets bigger, and unlocks bigger things to eat. Things too big to eat will block her path until she's grown enough.</p>
+    <h3>Explore</h3>
+    <p>The world isn't just scattered at random — a forest, a suburb, a city, a military base, a farm, a desert, a lakeside, and an airfield each have their own things to eat, with mountains guarding the approach to the World itself.</p>
+    <h3>Finding the World</h3>
+    <p>Somewhere out there sits the entire world, waiting. Use the minimap in the corner to find it — it's marked with a gold star. You'll need to grow enormous before you can take a bite.</p>
+    <h3>Moodeng</h3>
+    <p>Kelci's pygmy-hippo companion follows her everywhere and grows right along with her. Press <strong>M</strong> (or the button in the corner) to hop on — riding Moodeng makes Kelci noticeably faster.</p>
+  </div>
+  <div>
+    <button class="btn secondary" id="btnInstructionsBack">Back</button>
+    <button class="btn" id="btnInstructionsPlay">Play</button>
+  </div>
+</div>
+
+<div class="screen hidden" id="gameScreen">
+  <canvas id="world"></canvas>
+  <div id="hud">
+    <div class="name">Kelci</div>
+    <div class="tier" id="tierName">Tiny Kelci</div>
+    <div class="barTrack"><div class="barFill" id="growthBar"></div></div>
+    <div class="statline" id="statLine">Size: 12</div>
+    <button id="moodengBtn">Ride Moodeng (M)</button>
+  </div>
+  <button id="exitBtn">Exit</button>
+  <canvas id="minimap" width="150" height="150"></canvas>
+  <div id="toast"></div>
+  <div id="touchpad">
+    <span></span><button data-dir="up">&#9650;</button><span></span>
+    <button data-dir="left">&#9664;</button><span></span><button data-dir="right">&#9654;</button>
+    <span></span><button data-dir="down">&#9660;</button><span></span>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="exitConfirm">
+  <div class="modal">
+    <h2>Leave the world?</h2>
+    <p>Are you sure? Kelci's growth this run will be lost.</p>
+    <button class="btn" id="exitYes">Yes, Exit</button>
+    <button class="btn secondary" id="exitNo">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="winModal">
+  <div class="modal">
+    <h2>Kelci ate the world!</h2>
+    <p>There's nothing left to grow into. Kelci is everything now.</p>
+    <button class="btn" id="playAgainBtn">Play Again</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ============================== Config ==============================
+
+  // Fixed outer boundary sized generously enough to fit up to 20 randomly
+  // placed, non-overlapping biome instances each game (see generateWorldLayout).
+  const LAYOUT_HALF = 4300;
+  const KELCI_SCREEN_RADIUS = 40; // Kelci's on-screen radius stays constant; the world scales around her
+
+  // Recomputed fresh every game by generateWorldLayout(): where Kelci starts
+  // (inside a suburb), where the World object ends up, and the list of
+  // placed biome instances ({type, cx, cy, r}) objects get scattered into.
+  let SPAWN_POS = { x: 0, y: 0 };
+  let WORLD_POS = { x: 0, y: 0 };
+  let ZONE_INSTANCES = [];
+
+  const TIERS = [
+    { name: 'Tiny Kelci',        radius: 12,  growthToNext: 60 },
+    { name: 'Growing Kelci',     radius: 18,  growthToNext: 140 },
+    { name: 'Big Kelci',         radius: 26,  growthToNext: 260 },
+    { name: 'Giant Kelci',       radius: 45,  growthToNext: 480 },
+    { name: 'Colossal Kelci',    radius: 65,  growthToNext: 800 },
+    { name: 'Titan Kelci',       radius: 90,  growthToNext: 1300 },
+    { name: 'Mountain-Sized Kelci', radius: 160, growthToNext: 2200 },
+    { name: 'Sky-High Kelci',    radius: 235, growthToNext: 3400 },
+    { name: 'Kaiju Kelci',       radius: 285, growthToNext: 6000 },
+    { name: 'World Eater Kelci', radius: 920, growthToNext: Infinity },
+  ];
+
+  // The nine biome types every game draws from. Named regions objects get
+  // clustered into, so the map reads as distinct places instead of a
+  // uniform scatter. Species without a `zones` list scatter across the
+  // whole map instead (ambient filler, e.g. pebbles/flowers).
+  const BIOME_TYPES = ['mountains', 'forest', 'suburbs', 'military', 'desert', 'farmland', 'lakeside', 'airfield', 'city'];
+
+  // `radius` drives eat-eligibility, render scale, and minimap culling.
+  // `hit` is a separate, shape-tuned collision radius for blocking/pushback —
+  // several shapes (mountains, cars, stadiums) are much narrower than their
+  // full bounding circle, so using `radius` for both made obstacles feel
+  // like they had an invisible wall well past their drawn edge.
+  const SPECIES = [
+    // ambient filler — scattered everywhere, including the open meadow at spawn
+    { key: 'pebble',   radius: 3,   hit: 2.6,  growth: 2,   count: 240, color: '#9a9a9a', draw: drawPebble },
+    { key: 'flower',   radius: 5,   hit: 4,    growth: 3,   count: 210, color: '#ff6fa5', draw: drawFlower },
+
+    // forest
+    { key: 'mushroom', radius: 6,   hit: 5,    growth: 4,   count: 70,  color: '#e04b3f', draw: drawMushroom, zones: ['forest'] },
+    { key: 'bush',     radius: 10,  hit: 9,    growth: 8,   count: 65,  color: '#3f8f3a', draw: drawBush, zones: ['forest'] },
+    { key: 'tree',     radius: 16,  hit: 13,   growth: 15,  count: 95,  color: '#3f8f3a', draw: drawTree, zones: ['forest', 'suburbs'] },
+
+    // suburbs
+    { key: 'mailbox',  radius: 11,  hit: 6,    growth: 9,   count: 28,  color: '#4267c9', draw: drawMailbox, zones: ['suburbs'] },
+    { key: 'car',      radius: 24,  hit: 13,   growth: 24,  count: 55,  color: '#e0473a', draw: drawCar, zones: ['suburbs', 'city'] },
+    { key: 'house',    radius: 42,  hit: 34,   growth: 50,  count: 32,  color: '#d9a441', draw: drawHouse, zones: ['suburbs'] },
+    { key: 'windmill', radius: 60,  hit: 21,   growth: 72,  count: 14,  color: '#e8e4d8', draw: drawWindmill, zones: ['suburbs'] },
+
+    // military
+    { key: 'tank',     radius: 20,  hit: 14,   growth: 20,  count: 22,  color: '#5a6b3a', draw: drawTank, zones: ['military'] },
+    { key: 'bunker',   radius: 48,  hit: 36,   growth: 58,  count: 14,  color: '#8a8a7a', draw: drawBunker, zones: ['military'] },
+
+    // city
+    { key: 'building', radius: 85,  hit: 60,   growth: 120, count: 24,  color: '#8a97a8', draw: drawBuilding, zones: ['city'] },
+    { key: 'stadium',  radius: 150, hit: 93,   growth: 230, count: 6,   color: '#c9c2a8', draw: drawStadium, zones: ['city'] },
+
+    // desert
+    { key: 'tumbleweed', radius: 6,  hit: 5,   growth: 5,   count: 45,  color: '#a8843f', draw: drawTumbleweed, zones: ['desert'] },
+    { key: 'cactus',   radius: 9,   hit: 7,    growth: 8,   count: 55,  color: '#4d8a5a', draw: drawCactus, zones: ['desert'] },
+    { key: 'mesa',     radius: 20,  hit: 16,   growth: 20,  count: 22,  color: '#b5654a', draw: drawMesa, zones: ['desert'] },
+    { key: 'palm',     radius: 30,  hit: 18,   growth: 32,  count: 16,  color: '#4d8a5a', draw: drawPalm, zones: ['desert'] },
+    { key: 'dune',     radius: 55,  hit: 45,   growth: 62,  count: 10,  color: '#dcc07a', draw: drawDune, zones: ['desert'] },
+
+    // farmland
+    { key: 'cropRow',  radius: 8,   hit: 7,    growth: 7,   count: 70,  color: '#8fbf4a', draw: drawCropRow, zones: ['farmland'] },
+    { key: 'scarecrow', radius: 14, hit: 6,    growth: 13,  count: 20,  color: '#c9a35f', draw: drawScarecrow, zones: ['farmland'] },
+    { key: 'tractor',  radius: 26,  hit: 16,   growth: 28,  count: 18,  color: '#5a9e3f', draw: drawTractor, zones: ['farmland'] },
+    { key: 'silo',     radius: 40,  hit: 22,   growth: 46,  count: 12,  color: '#c3c9cf', draw: drawSilo, zones: ['farmland'] },
+    { key: 'barn',     radius: 48,  hit: 38,   growth: 58,  count: 10,  color: '#a8402f', draw: drawBarn, zones: ['farmland'] },
+
+    // lakeside
+    { key: 'lilypad',  radius: 4,   hit: 3.5,  growth: 3,   count: 60,  color: '#4aa53d', draw: drawLilyPad, zones: ['lakeside'] },
+    { key: 'shoreRock', radius: 7,  hit: 6,    growth: 6,   count: 40,  color: '#9a9a9a', draw: drawShoreRock, zones: ['lakeside'] },
+    { key: 'rowboat',  radius: 22,  hit: 12,   growth: 22,  count: 16,  color: '#a8402f', draw: drawRowboat, zones: ['lakeside'] },
+    { key: 'dock',     radius: 35,  hit: 14,   growth: 36,  count: 12,  color: '#7a5432', draw: drawDock, zones: ['lakeside'] },
+
+    // airfield
+    { key: 'plane',    radius: 55,  hit: 22,   growth: 66,  count: 15,  color: '#c9d3da', draw: drawPlane, zones: ['airfield'] },
+    { key: 'controlTower', radius: 65, hit: 24, growth: 78, count: 8,   color: '#8a97a8', draw: drawControlTower, zones: ['airfield'] },
+    { key: 'hangar',   radius: 90,  hit: 65,   growth: 130, count: 10,  color: '#9aa5ac', draw: drawHangar, zones: ['airfield'] },
+
+    // landmarks / mountains
+    { key: 'castle',   radius: 230, hit: 184,  growth: 340, count: 8,   color: '#9a9a9a', draw: drawCastle },
+    { key: 'mountain', radius: 280, hit: 154,  growth: 500, count: 12,  color: '#8a7562', draw: drawMountain, zones: ['mountains'] },
+  ];
+
+  // ============================== State ==============================
+
+  let kelci, moodeng, objects, particles, tierIndex, growth, camZoom, keys, touchDir, world, minimap, wctx, mctx;
+  let animT = 0, lastTime = 0, running = false, audioCtx = null;
+
+  function resetState() {
+    generateWorldLayout();
+    kelci = { x: SPAWN_POS.x, y: SPAWN_POS.y, facing: 'down', moving: false, walkPhase: 0 };
+    moodeng = { x: SPAWN_POS.x - 40, y: SPAWN_POS.y + 30, mounted: false, facingRight: true };
+    tierIndex = 0;
+    growth = 0;
+    objects = generateObjects();
+    particles = [];
+    camZoom = KELCI_SCREEN_RADIUS / TIERS[0].radius;
+  }
+
+  function kelciRadius() { return TIERS[tierIndex].radius; }
+  function moodengRadius() { return kelciRadius() * 0.55; } // Moodeng grows alongside Kelci
+
+  function toggleMoodeng() {
+    if (!moodeng) return;
+    moodeng.mounted = !moodeng.mounted;
+    if (moodeng.mounted) { moodeng.x = kelci.x; moodeng.y = kelci.y; }
+    renderMoodengButton();
+  }
+
+  function facingVector(facing) {
+    switch (facing) {
+      case 'up': return { x: 0, y: -1 };
+      case 'left': return { x: -1, y: 0 };
+      case 'right': return { x: 1, y: 0 };
+      default: return { x: 0, y: 1 };
+    }
+  }
+
+  const SPAWN_CLEARING = 220; // keep the area right around Kelci's start empty
+  const ZONE_BUFFER = 150;    // minimum gap kept between two biome instances
+
+  // Builds a fresh, randomized map: 15-20 biome instances, every one of the
+  // 9 types guaranteed at least once, extra repeats picked at random, and
+  // placed with no two instances overlapping. Kelci always starts inside a
+  // suburb; the World is tucked just beyond whichever mountain instance
+  // ends up farthest from her, so mountains still guard the approach.
+  function generateWorldLayout() {
+    const totalInstances = 15 + Math.floor(Math.random() * 6); // 15..20
+    const plan = [...BIOME_TYPES];
+    while (plan.length < totalInstances) {
+      plan.push(BIOME_TYPES[Math.floor(Math.random() * BIOME_TYPES.length)]);
+    }
+    for (let i = plan.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [plan[i], plan[j]] = [plan[j], plan[i]];
+    }
+    // guarantee a suburb is placed first, anchored near the center, so it can be spawn
+    const homeIdx = plan.indexOf('suburbs');
+    plan.splice(homeIdx, 1);
+    plan.unshift('suburbs');
+
+    const placed = [];
+    plan.forEach((type, idx) => {
+      const r = 500 + Math.random() * 220;
+      let cx, cy;
+      if (idx === 0) {
+        cx = (Math.random() - 0.5) * 300;
+        cy = (Math.random() - 0.5) * 300;
+      } else {
+        const bound = LAYOUT_HALF - r - 300;
+        let tries = 0, ok = false;
+        do {
+          cx = (Math.random() * 2 - 1) * bound;
+          cy = (Math.random() * 2 - 1) * bound;
+          ok = true;
+          for (const z of placed) {
+            if (Math.hypot(cx - z.cx, cy - z.cy) < r + z.r + ZONE_BUFFER) { ok = false; break; }
+          }
+          tries++;
+        } while (!ok && tries < 400);
+        // after max tries just accept the last sample — every biome type must exist
+      }
+      placed.push({ type, cx, cy, r });
+    });
+
+    ZONE_INSTANCES = placed;
+    SPAWN_POS = { x: placed[0].cx, y: placed[0].cy };
+
+    const mountainInstances = placed.filter((z) => z.type === 'mountains');
+    let guardian = mountainInstances[0];
+    let bestDist = -1;
+    for (const z of mountainInstances) {
+      const d = Math.hypot(z.cx - SPAWN_POS.x, z.cy - SPAWN_POS.y);
+      if (d > bestDist) { bestDist = d; guardian = z; }
+    }
+    const dx = (guardian.cx - SPAWN_POS.x) / (bestDist || 1);
+    const dy = (guardian.cy - SPAWN_POS.y) / (bestDist || 1);
+    WORLD_POS = {
+      x: clampLayout(guardian.cx + dx * (guardian.r + 700)),
+      y: clampLayout(guardian.cy + dy * (guardian.r + 700)),
+    };
+  }
+
+  function clampLayout(v) {
+    return Math.max(-LAYOUT_HALF + 200, Math.min(LAYOUT_HALF - 200, v));
+  }
+
+  function instancesForZoneTypes(types) {
+    return ZONE_INSTANCES.filter((z) => types.includes(z.type));
+  }
+
+  function generateObjects() {
+    const list = [];
+
+    for (const sp of SPECIES) {
+      const targetInstances = sp.zones ? instancesForZoneTypes(sp.zones) : null;
+      let placedCount = 0;
+      let attempts = 0;
+      const maxAttempts = sp.count * 50;
+      while (placedCount < sp.count && attempts < maxAttempts) {
+        attempts++;
+        let x, y;
+        if (!targetInstances) {
+          // ambient filler: scattered across the whole map
+          const minDist = Math.max(120, sp.radius * 3.2);
+          const angle = Math.random() * Math.PI * 2;
+          const dist = minDist + Math.random() * (LAYOUT_HALF - 150 - minDist);
+          x = Math.cos(angle) * dist; y = Math.sin(angle) * dist;
+        } else if (targetInstances.length === 0) {
+          break; // this game's plan has no instance of any zone this species needs
+        } else {
+          const zone = targetInstances[placedCount % targetInstances.length];
+          const angle = Math.random() * Math.PI * 2;
+          const dist = Math.sqrt(Math.random()) * zone.r; // uniform over the disk area
+          x = zone.cx + Math.cos(angle) * dist; y = zone.cy + Math.sin(angle) * dist;
+        }
+
+        if (Math.hypot(x - SPAWN_POS.x, y - SPAWN_POS.y) < SPAWN_CLEARING) continue;
+        if (Math.hypot(x - WORLD_POS.x, y - WORLD_POS.y) < 420) continue;
+        if (Math.abs(x) > LAYOUT_HALF - 100 || Math.abs(y) > LAYOUT_HALF - 100) continue;
+
+        let overlaps = false;
+        for (const other of list) {
+          const otherHit = other.isWorld ? TIERS[TIERS.length - 1].radius : other.species.hit;
+          if (Math.hypot(x - other.x, y - other.y) < sp.hit + otherHit + 6) { overlaps = true; break; }
+        }
+        if (overlaps) continue;
+
+        list.push({ x, y, species: sp, alive: true, seed: Math.random() * 1000 });
+        placedCount++;
+      }
+    }
+
+    list.push({ x: WORLD_POS.x, y: WORLD_POS.y, species: null, isWorld: true, alive: true, seed: 0 });
+    return list;
+  }
+
+  // ============================== Drawing: species ==============================
+  // Each draw function receives (ctx, r) and draws centered at (0,0) in world units.
+  // The caller has already translated/scaled the context.
+
+  function outline(ctx) { ctx.lineWidth = Math.max(1, ctx.lineWidth); ctx.strokeStyle = 'rgba(58,56,50,0.55)'; }
+
+  // A single soft, flat shadow ellipse under every sprite instead of letting
+  // each shape's individual fills/strokes cast their own shadow (which would
+  // be both expensive and visually noisy — e.g. every window on a building).
+  // Drawn once, cheaply, before the sprite itself.
+  function drawGroundShadow(ctx, r) {
+    ctx.fillStyle = 'rgba(20, 30, 15, 0.18)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.8, r * 0.72, r * 0.26, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Soft top-light / bottom-shadow pass, laid over a sprite after its flat
+  // colors are drawn. Every shape in this game is flat single-tone fills —
+  // this is what gives them a sense of form/volume (a hint of soft light
+  // falling from above) instead of looking like flat vector clip-art,
+  // without having to hand-author gradients into 30+ draw functions.
+  // Approximated with an oval clip roughly matching each object's footprint
+  // rather than its exact silhouette — a full per-shape mask would need an
+  // offscreen buffer per object, too costly to redo every visible object
+  // every frame — but at gameplay scale the mismatch on boxier shapes
+  // (houses, buildings) isn't perceptible since the effect is subtle.
+  function drawFormShading(ctx, r) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.05, r * 1.15, r * 1.25, 0, 0, Math.PI * 2);
+    ctx.clip();
+    const grad = ctx.createLinearGradient(0, -r * 1.3, 0, r * 1.3);
+    grad.addColorStop(0, 'rgba(255,255,255,0.24)');
+    grad.addColorStop(0.42, 'rgba(255,255,255,0)');
+    grad.addColorStop(0.7, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.16)');
+    ctx.fillStyle = grad;
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.fillRect(-r * 1.4, -r * 1.4, r * 2.8, r * 2.8);
+    ctx.restore();
+  }
+
+  function drawPebble(ctx, r) {
+    ctx.fillStyle = '#a8a8a0';
+    outline(ctx); ctx.lineWidth = r * 0.15;
+    ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.75, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+
+  function drawFlower(ctx, r) {
+    ctx.strokeStyle = '#3f8f3a'; ctx.lineWidth = r * 0.18;
+    ctx.beginPath(); ctx.moveTo(0, r * 0.3); ctx.lineTo(0, r * 1.4); ctx.stroke();
+    const petalColors = ['#ff6fa5', '#ff86b5'];
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      ctx.fillStyle = petalColors[i % 2];
+      ctx.beginPath(); ctx.ellipse(Math.cos(a) * r * 0.55, Math.sin(a) * r * 0.55, r * 0.5, r * 0.32, a, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = '#ffd23f';
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.4, 0, Math.PI * 2); ctx.fill();
+    outline(ctx); ctx.lineWidth = r * 0.08; ctx.stroke();
+  }
+
+  function drawMushroom(ctx, r) {
+    ctx.fillStyle = '#f2e6c9'; outline(ctx); ctx.lineWidth = r * 0.15;
+    ctx.fillRect(-r * 0.22, 0, r * 0.44, r * 0.9); ctx.strokeRect(-r * 0.22, 0, r * 0.44, r * 0.9);
+    ctx.fillStyle = '#e04b3f';
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.85, Math.PI, 0); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff';
+    [[-0.4, -0.4], [0.3, -0.55], [0, -0.15]].forEach(([dx, dy]) => {
+      ctx.beginPath(); ctx.arc(dx * r, dy * r, r * 0.14, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+
+  function drawBush(ctx, r) {
+    ctx.fillStyle = '#3f8f3a'; outline(ctx); ctx.lineWidth = r * 0.1;
+    [[-0.45, 0], [0.45, 0], [0, -0.4]].forEach(([dx, dy]) => {
+      ctx.beginPath(); ctx.arc(dx * r, dy * r, r * 0.62, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    });
+  }
+
+  function drawMailbox(ctx, r) {
+    ctx.strokeStyle = 'rgba(58,56,50,0.55)'; ctx.lineWidth = r * 0.14;
+    ctx.beginPath(); ctx.moveTo(0, r * 0.2); ctx.lineTo(0, r * 1.2); ctx.stroke();
+    ctx.fillStyle = '#4267c9';
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.55, r * 0.2); ctx.lineTo(r * 0.55, r * 0.2);
+    ctx.arc(0, r * 0.2, r * 0.55, 0, Math.PI, true);
+    ctx.fill(); ctx.stroke();
+  }
+
+  function drawTree(ctx, r, seed) {
+    ctx.fillStyle = '#7a5432'; outline(ctx); ctx.lineWidth = r * 0.1;
+    ctx.fillRect(-r * 0.16, r * 0.1, r * 0.32, r * 0.9); ctx.strokeRect(-r * 0.16, r * 0.1, r * 0.32, r * 0.9);
+    ctx.fillStyle = '#4aa53d';
+    [[-0.5, -0.3, 0.7], [0.5, -0.3, 0.7], [0, -0.7, 0.85], [0, -0.15, 0.6]].forEach(([dx, dy, s]) => {
+      ctx.beginPath(); ctx.arc(dx * r, dy * r, r * s, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    });
+  }
+
+  function drawCar(ctx, r) {
+    ctx.fillStyle = '#e0473a'; outline(ctx); ctx.lineWidth = r * 0.08;
+    roundRect(ctx, -r, -r * 0.35, r * 2, r * 0.7, r * 0.2); ctx.fill(); ctx.stroke();
+    roundRect(ctx, -r * 0.55, -r * 0.75, r * 1.1, r * 0.5, r * 0.15); ctx.fillStyle = '#bfe3f2'; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#41403c';
+    [[-r * 0.55, r * 0.35], [r * 0.55, r * 0.35]].forEach(([dx, dy]) => {
+      ctx.beginPath(); ctx.arc(dx, dy, r * 0.28, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+
+  function drawHouse(ctx, r) {
+    ctx.fillStyle = '#d9a441'; outline(ctx); ctx.lineWidth = r * 0.06;
+    ctx.fillRect(-r * 0.75, -r * 0.1, r * 1.5, r * 1.1); ctx.strokeRect(-r * 0.75, -r * 0.1, r * 1.5, r * 1.1);
+    ctx.fillStyle = '#a8402f';
+    ctx.beginPath(); ctx.moveTo(-r * 0.95, -r * 0.1); ctx.lineTo(0, -r * 0.9); ctx.lineTo(r * 0.95, -r * 0.1); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#6b4a2a';
+    ctx.fillRect(-r * 0.18, r * 0.35, r * 0.36, r * 0.65); ctx.strokeRect(-r * 0.18, r * 0.35, r * 0.36, r * 0.65);
+    ctx.fillStyle = '#bfe3f2';
+    ctx.fillRect(-r * 0.55, r * 0.1, r * 0.24, r * 0.24); ctx.strokeRect(-r * 0.55, r * 0.1, r * 0.24, r * 0.24);
+    ctx.fillRect(r * 0.3, r * 0.1, r * 0.24, r * 0.24); ctx.strokeRect(r * 0.3, r * 0.1, r * 0.24, r * 0.24);
+  }
+
+  function drawWindmill(ctx, r, seed, t) {
+    ctx.fillStyle = '#e8e4d8'; outline(ctx); ctx.lineWidth = r * 0.05;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.22, r); ctx.lineTo(r * 0.22, r); ctx.lineTo(r * 0.12, -r * 0.2); ctx.lineTo(-r * 0.12, -r * 0.2);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.save();
+    ctx.translate(0, -r * 0.2);
+    ctx.rotate((t || 0) * 1.4 + seed);
+    ctx.fillStyle = '#d8d2bd';
+    for (let i = 0; i < 4; i++) {
+      ctx.save(); ctx.rotate((Math.PI / 2) * i);
+      ctx.beginPath();
+      ctx.moveTo(0, 0); ctx.lineTo(r * 0.12, -r * 0.1); ctx.lineTo(0, -r * 0.75); ctx.lineTo(-r * 0.12, -r * 0.1);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function drawTank(ctx, r) {
+    ctx.fillStyle = '#41403c'; outline(ctx); ctx.lineWidth = r * 0.08;
+    ctx.fillRect(-r, r * 0.3, r * 2, r * 0.35); ctx.strokeRect(-r, r * 0.3, r * 2, r * 0.35);
+    ctx.fillStyle = '#5a6b3a';
+    roundRect(ctx, -r * 0.85, -r * 0.15, r * 1.7, r * 0.55, r * 0.12); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#4a5a2f';
+    ctx.beginPath(); ctx.arc(0, -r * 0.35, r * 0.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(58,56,50,0.55)'; ctx.lineWidth = r * 0.12;
+    ctx.beginPath(); ctx.moveTo(0, -r * 0.35); ctx.lineTo(0, -r * 0.95); ctx.stroke();
+  }
+
+  function drawBunker(ctx, r) {
+    ctx.fillStyle = '#8a8a7a'; outline(ctx); ctx.lineWidth = r * 0.05;
+    ctx.fillRect(-r * 0.9, -r * 0.1, r * 1.8, r * 0.9); ctx.strokeRect(-r * 0.9, -r * 0.1, r * 1.8, r * 0.9);
+    ctx.beginPath(); ctx.arc(0, -r * 0.1, r * 0.9, Math.PI, 0); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#41403c';
+    ctx.fillRect(-r * 0.45, r * 0.05, r * 0.9, r * 0.16);
+  }
+
+  function drawBuilding(ctx, r) {
+    ctx.fillStyle = '#8a97a8'; outline(ctx); ctx.lineWidth = r * 0.03;
+    ctx.fillRect(-r * 0.6, -r, r * 1.2, r * 2); ctx.strokeRect(-r * 0.6, -r, r * 1.2, r * 2);
+    ctx.fillStyle = '#ffd23f';
+    for (let row = 0; row < 6; row++) {
+      for (let col = 0; col < 3; col++) {
+        if ((row + col + Math.round(r)) % 3 === 0) continue;
+        ctx.fillRect(-r * 0.45 + col * r * 0.42, -r * 0.8 + row * r * 0.3, r * 0.22, r * 0.16);
+      }
+    }
+  }
+
+  function drawStadium(ctx, r) {
+    ctx.fillStyle = '#c9c2a8'; outline(ctx); ctx.lineWidth = r * 0.03;
+    ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.65, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#7ec87a';
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 0.62, r * 0.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+
+  function drawCastle(ctx, r) {
+    ctx.fillStyle = '#9a9a9a'; outline(ctx); ctx.lineWidth = r * 0.025;
+    ctx.fillRect(-r * 0.7, -r * 0.3, r * 1.4, r * 1.2); ctx.strokeRect(-r * 0.7, -r * 0.3, r * 1.4, r * 1.2);
+    for (let i = -1; i <= 1; i += 2) {
+      ctx.fillStyle = '#8a8a8a';
+      ctx.fillRect(i * r * 0.85 - r * 0.18, -r * 0.7, r * 0.36, r * 1.6); ctx.strokeRect(i * r * 0.85 - r * 0.18, -r * 0.7, r * 0.36, r * 1.6);
+      ctx.fillStyle = i > 0 ? '#4267c9' : '#a8402f';
+      ctx.beginPath(); ctx.moveTo(i * r * 0.85 - r * 0.2, -r * 0.7); ctx.lineTo(i * r * 0.85, -r * 1.05); ctx.lineTo(i * r * 0.85 + r * 0.2, -r * 0.7);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = '#9a9a9a';
+    for (let i = -3; i <= 3; i++) {
+      if (i % 2 === 0) ctx.fillRect(i * r * 0.2 - r * 0.08, -r * 0.42, r * 0.16, r * 0.16);
+    }
+  }
+
+  function drawMountain(ctx, r) {
+    ctx.fillStyle = '#8a7562'; outline(ctx); ctx.lineWidth = r * 0.02;
+    ctx.beginPath(); ctx.moveTo(-r, r * 0.6); ctx.lineTo(-r * 0.15, -r); ctx.lineTo(r * 0.35, -r * 0.35); ctx.lineTo(r, r * 0.6);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f0f4f7';
+    ctx.beginPath(); ctx.moveTo(-r * 0.15, -r); ctx.lineTo(r * 0.05, -r * 0.62); ctx.lineTo(-r * 0.35, -r * 0.6); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(r * 0.35, -r * 0.35); ctx.lineTo(r * 0.5, -r * 0.15); ctx.lineTo(r * 0.15, -r * 0.15); ctx.closePath(); ctx.fill();
+  }
+
+  // ---- Desert ----
+
+  function drawTumbleweed(ctx, r) {
+    ctx.strokeStyle = '#8a6a3f'; ctx.lineWidth = r * 0.12; ctx.lineCap = 'round';
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * (0.7 + (i % 2) * 0.2), r * 0.4, a, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  function drawCactus(ctx, r) {
+    ctx.fillStyle = '#4d8a5a'; outline(ctx); ctx.lineWidth = r * 0.1;
+    roundRect(ctx, -r * 0.22, -r, r * 0.44, r * 1.9, r * 0.2); ctx.fill(); ctx.stroke();
+    [-1, 1].forEach((side) => {
+      const x0 = side > 0 ? r * 0.22 : -r * 0.22 - r * 0.4;
+      roundRect(ctx, x0, -r * 0.35, r * 0.4, r * 0.75, r * 0.15);
+      ctx.fill(); ctx.stroke();
+    });
+  }
+
+  function drawMesa(ctx, r) {
+    ctx.fillStyle = '#b5654a'; outline(ctx); ctx.lineWidth = r * 0.05;
+    ctx.beginPath();
+    ctx.moveTo(-r, r * 0.7); ctx.lineTo(-r * 0.7, -r * 0.5); ctx.lineTo(r * 0.7, -r * 0.5); ctx.lineTo(r, r * 0.7);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#c97a5a';
+    ctx.fillRect(-r * 0.75, -r * 0.6, r * 1.5, r * 0.18);
+  }
+
+  function drawPalm(ctx, r) {
+    ctx.strokeStyle = '#8a6a3f'; ctx.lineWidth = r * 0.14;
+    ctx.beginPath(); ctx.moveTo(0, r * 0.9); ctx.quadraticCurveTo(r * 0.2, 0, 0, -r * 0.7); ctx.stroke();
+    ctx.fillStyle = '#4d8a5a'; outline(ctx); ctx.lineWidth = r * 0.06;
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + (i - 2) * 0.5;
+      ctx.save();
+      ctx.translate(0, -r * 0.7); ctx.rotate(a);
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.4, r * 0.16, r * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawDune(ctx, r) {
+    ctx.fillStyle = '#dcc07a'; outline(ctx); ctx.lineWidth = r * 0.02;
+    ctx.beginPath(); ctx.ellipse(0, r * 0.2, r, r * 0.55, 0, Math.PI, 0, true); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = r * 0.03;
+    ctx.beginPath(); ctx.ellipse(-r * 0.15, r * 0.05, r * 0.55, r * 0.2, 0.2, Math.PI, 0.3 * Math.PI); ctx.stroke();
+  }
+
+  // ---- Farmland ----
+
+  function drawCropRow(ctx, r) {
+    ctx.fillStyle = '#8fbf4a'; outline(ctx); ctx.lineWidth = r * 0.1;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath(); ctx.arc(i * r * 0.55, 0, r * 0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+  }
+
+  function drawScarecrow(ctx, r) {
+    ctx.strokeStyle = '#c9a35f'; ctx.lineWidth = r * 0.16;
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.3); ctx.lineTo(0, r); ctx.moveTo(-r * 0.6, 0); ctx.lineTo(r * 0.6, 0);
+    ctx.stroke();
+    ctx.fillStyle = '#e8c99a'; outline(ctx); ctx.lineWidth = r * 0.08;
+    ctx.beginPath(); ctx.arc(0, -r * 0.55, r * 0.32, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+
+  function drawTractor(ctx, r) {
+    ctx.fillStyle = '#5a9e3f'; outline(ctx); ctx.lineWidth = r * 0.08;
+    roundRect(ctx, -r * 0.3, -r * 0.55, r * 0.9, r * 0.6, r * 0.1); ctx.fill(); ctx.stroke();
+    roundRect(ctx, -r * 0.85, -r * 0.05, r * 0.6, r * 0.4, r * 0.1); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#41403c';
+    ctx.beginPath(); ctx.arc(r * 0.35, r * 0.35, r * 0.45, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(-r * 0.6, r * 0.35, r * 0.24, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+
+  function drawSilo(ctx, r) {
+    ctx.fillStyle = '#c3c9cf'; outline(ctx); ctx.lineWidth = r * 0.04;
+    roundRect(ctx, -r * 0.4, -r * 0.5, r * 0.8, r * 1.5, r * 0.35); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#8a97a8';
+    ctx.beginPath(); ctx.arc(0, -r * 0.5, r * 0.4, Math.PI, 0); ctx.fill(); ctx.stroke();
+  }
+
+  function drawBarn(ctx, r) {
+    ctx.fillStyle = '#a8402f'; outline(ctx); ctx.lineWidth = r * 0.05;
+    ctx.fillRect(-r * 0.75, -r * 0.1, r * 1.5, r * 1.0); ctx.strokeRect(-r * 0.75, -r * 0.1, r * 1.5, r * 1.0);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.95, -r * 0.1); ctx.lineTo(0, -r * 0.85); ctx.lineTo(r * 0.95, -r * 0.1); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f2e6c9';
+    ctx.beginPath(); ctx.arc(0, -r * 0.45, r * 0.16, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f2e6c9';
+    ctx.fillRect(-r * 0.18, r * 0.2, r * 0.36, r * 0.7); ctx.strokeRect(-r * 0.18, r * 0.2, r * 0.36, r * 0.7);
+  }
+
+  // ---- Lakeside ----
+
+  function drawLilyPad(ctx, r) {
+    ctx.fillStyle = '#4aa53d'; outline(ctx); ctx.lineWidth = r * 0.12;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0.15 * Math.PI, 1.85 * Math.PI); ctx.lineTo(0, 0); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+
+  function drawShoreRock(ctx, r) {
+    ctx.fillStyle = '#9a9a9a'; outline(ctx); ctx.lineWidth = r * 0.14;
+    ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.7, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+
+  function drawRowboat(ctx, r) {
+    ctx.fillStyle = '#a8402f'; outline(ctx); ctx.lineWidth = r * 0.1;
+    ctx.beginPath();
+    ctx.moveTo(-r, -r * 0.1); ctx.quadraticCurveTo(0, r * 0.55, r, -r * 0.1);
+    ctx.quadraticCurveTo(0, -r * 0.35, -r, -r * 0.1); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#6b3a26'; ctx.lineWidth = r * 0.08;
+    ctx.beginPath(); ctx.moveTo(-r * 0.55, -r * 0.15); ctx.lineTo(r * 0.55, -r * 0.15); ctx.stroke();
+  }
+
+  function drawDock(ctx, r) {
+    ctx.fillStyle = '#7a5432'; outline(ctx); ctx.lineWidth = r * 0.06;
+    ctx.fillRect(-r * 0.35, -r, r * 0.7, r * 2); ctx.strokeRect(-r * 0.35, -r, r * 0.7, r * 2);
+    ctx.strokeStyle = '#5a3d22'; ctx.lineWidth = r * 0.05;
+    for (let i = -3; i <= 3; i++) {
+      ctx.beginPath(); ctx.moveTo(-r * 0.35, i * r * 0.28); ctx.lineTo(r * 0.35, i * r * 0.28); ctx.stroke();
+    }
+  }
+
+  // ---- Airfield ----
+
+  function drawPlane(ctx, r) {
+    ctx.fillStyle = '#c9d3da'; outline(ctx); ctx.lineWidth = r * 0.05;
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 0.24, r, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, -r * 0.15, r * 0.95, r * 0.16, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#8a97a8';
+    ctx.beginPath(); ctx.moveTo(-r * 0.14, r * 0.65); ctx.lineTo(0, r); ctx.lineTo(r * 0.14, r * 0.65); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+
+  function drawControlTower(ctx, r) {
+    ctx.fillStyle = '#8a97a8'; outline(ctx); ctx.lineWidth = r * 0.06;
+    ctx.fillRect(-r * 0.16, -r * 0.2, r * 0.32, r * 1.2); ctx.strokeRect(-r * 0.16, -r * 0.2, r * 0.32, r * 1.2);
+    ctx.fillStyle = '#c9d3da';
+    roundRect(ctx, -r * 0.42, -r * 0.55, r * 0.84, r * 0.4, r * 0.1); ctx.fill(); ctx.stroke();
+  }
+
+  function drawHangar(ctx, r) {
+    ctx.fillStyle = '#9aa5ac'; outline(ctx); ctx.lineWidth = r * 0.03;
+    ctx.fillRect(-r, -r * 0.15, r * 2, r); ctx.strokeRect(-r, -r * 0.15, r * 2, r);
+    ctx.beginPath(); ctx.arc(0, -r * 0.15, r, Math.PI, 0); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#5a6570';
+    ctx.fillRect(-r * 0.55, r * 0.15, r * 1.1, r * 0.7);
+  }
+
+  function drawWorld(ctx, r, t) {
+    const pulse = 1 + Math.sin(t * 1.6) * 0.02;
+    ctx.save(); ctx.scale(pulse, pulse);
+    ctx.fillStyle = '#3f7bd6'; outline(ctx); ctx.lineWidth = r * 0.02;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#4aa53d';
+    const blobs = [[-0.4, -0.3, 0.42], [0.3, -0.5, 0.3], [0.5, 0.2, 0.38], [-0.3, 0.45, 0.34], [-0.05, 0.02, 0.28]];
+    blobs.forEach(([dx, dy, s]) => {
+      ctx.beginPath(); ctx.arc(dx * r, dy * r, r * s, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = r * 0.015;
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.12, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function roundRect(ctx, x, y, w, h, rad) {
+    ctx.beginPath();
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
+    ctx.closePath();
+  }
+
+  // ============================== Drawing: Kelci ==============================
+
+  function drawKelci(ctx, r, facing, walkPhase) {
+    const legSwing = Math.sin(walkPhase) * r * 0.22;
+    ctx.lineWidth = r * 0.06;
+    ctx.strokeStyle = 'rgba(58,56,50,0.55)';
+
+    // legs (alternate lifting while walking)
+    ctx.fillStyle = '#3a3a3a';
+    [-1, 1].forEach((side) => {
+      const lift = Math.max(0, side * legSwing) * 0.5;
+      ctx.beginPath();
+      roundRect(ctx, side * r * 0.28 - r * 0.14, r * 0.75 - lift, r * 0.28, r * 0.55, r * 0.1);
+      ctx.fill(); ctx.stroke();
+    });
+
+    // dress
+    ctx.fillStyle = '#4fc3e0';
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.55, r * 0.85);
+    ctx.quadraticCurveTo(-r * 0.15, r * 0.15, -r * 0.4, -r * 0.15);
+    ctx.lineTo(r * 0.4, -r * 0.15);
+    ctx.quadraticCurveTo(r * 0.15, r * 0.15, r * 0.55, r * 0.85);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // arms
+    ctx.fillStyle = '#f4c9a0';
+    [-1, 1].forEach((side) => {
+      ctx.beginPath();
+      ctx.ellipse(side * r * 0.55, r * 0.15, r * 0.14, r * 0.32, side * -0.25, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+    });
+
+    // head
+    ctx.fillStyle = '#f4c9a0';
+    ctx.beginPath(); ctx.arc(0, -r * 0.5, r * 0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    if (facing === 'up') {
+      // back of head: just hair, no face
+      ctx.fillStyle = '#7a4326';
+      ctx.beginPath(); ctx.arc(0, -r * 0.55, r * 0.52, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    } else {
+      // hair (top + sides)
+      ctx.fillStyle = '#7a4326';
+      ctx.beginPath(); ctx.arc(0, -r * 0.72, r * 0.42, Math.PI, 0); ctx.fill(); ctx.stroke();
+      [-1, 1].forEach((side) => {
+        ctx.beginPath(); ctx.arc(side * r * 0.5, -r * 0.35, r * 0.16, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      });
+      // face
+      const eyeDX = facing === 'left' ? -r * 0.08 : facing === 'right' ? r * 0.08 : 0;
+      ctx.fillStyle = '#41403c';
+      [-1, 1].forEach((side) => {
+        ctx.beginPath(); ctx.arc(side * r * 0.16 + eyeDX, -r * 0.52, r * 0.06, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.strokeStyle = '#c0654a'; ctx.lineWidth = r * 0.05;
+      ctx.beginPath(); ctx.arc(eyeDX, -r * 0.38, r * 0.12, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    }
+  }
+
+  // Moodeng, Kelci's pygmy-hippo steed. Faces +x by default; mirrored
+  // horizontally to face left. Drawn centered at (0,0) like everything else.
+  function drawMoodeng(ctx, r, facingRight) {
+    ctx.save();
+    if (!facingRight) ctx.scale(-1, 1);
+
+    ctx.strokeStyle = 'rgba(58,56,50,0.55)';
+
+    // tail
+    ctx.strokeStyle = '#d68f9a'; ctx.lineWidth = r * 0.08; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-r * 0.9, 0); ctx.quadraticCurveTo(-r * 1.15, r * 0.18, -r * 0.95, r * 0.32); ctx.stroke();
+
+    // legs
+    ctx.fillStyle = '#d68f9a'; ctx.strokeStyle = 'rgba(58,56,50,0.55)'; ctx.lineWidth = r * 0.05;
+    [-0.55, -0.2, 0.2, 0.55].forEach((ox) => {
+      ctx.beginPath(); ctx.ellipse(ox * r, r * 0.62, r * 0.15, r * 0.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    });
+
+    // body
+    ctx.fillStyle = '#e8a6b0'; ctx.lineWidth = r * 0.06;
+    ctx.beginPath(); ctx.ellipse(0, r * 0.08, r * 0.95, r * 0.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    // ears
+    ctx.fillStyle = '#e8a6b0';
+    [-0.16, 0.16].forEach((oy) => {
+      ctx.beginPath(); ctx.ellipse(r * 0.68, -r * 0.42 + oy * r, r * 0.13, r * 0.13, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    });
+
+    // head
+    ctx.beginPath(); ctx.ellipse(r * 0.75, -r * 0.02, r * 0.48, r * 0.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    // snout
+    ctx.fillStyle = '#dc93a0';
+    ctx.beginPath(); ctx.ellipse(r * 1.15, r * 0.05, r * 0.17, r * 0.18, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    // nostrils + eye
+    ctx.fillStyle = '#41403c';
+    ctx.beginPath(); ctx.arc(r * 1.19, -r * 0.02, r * 0.03, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r * 1.19, r * 0.1, r * 0.03, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r * 0.82, -r * 0.1, r * 0.05, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+  }
+
+  // ============================== Setup ==============================
+
+  const introCanvas = document.getElementById('introPreview');
+  const introCtx = introCanvas.getContext('2d');
+  (function animateIntroPreview() {
+    let phase = 0;
+    function frame() {
+      phase += 0.05;
+      introCtx.clearRect(0, 0, 140, 140);
+      introCtx.save();
+      introCtx.translate(70, 90);
+      drawKelci(introCtx, 55, 'down', phase);
+      introCtx.restore();
+      requestAnimationFrame(frame);
+    }
+    frame();
+  })();
+
+  function initGameCanvases() {
+    world = document.getElementById('world');
+    wctx = world.getContext('2d');
+    minimap = document.getElementById('minimap');
+    mctx = minimap.getContext('2d');
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+  }
+
+  function resizeCanvas() {
+    if (!world) return;
+    world.width = window.innerWidth;
+    world.height = window.innerHeight;
+  }
+
+  // ============================== Input ==============================
+
+  keys = {};
+  touchDir = null;
+  window.addEventListener('keydown', (e) => {
+    keys[e.key.toLowerCase()] = true;
+    if (e.key.toLowerCase() === 'm' && !e.repeat && running) toggleMoodeng();
+  });
+  window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+  document.getElementById('moodengBtn').addEventListener('click', () => { if (running) toggleMoodeng(); });
+
+  if ('ontouchstart' in window) {
+    document.getElementById('touchpad').classList.add('visible');
+  }
+  document.querySelectorAll('#touchpad button').forEach((btn) => {
+    const dir = btn.dataset.dir;
+    const start = (e) => { e.preventDefault(); touchDir = dir; };
+    const end = (e) => { e.preventDefault(); if (touchDir === dir) touchDir = null; };
+    btn.addEventListener('touchstart', start);
+    btn.addEventListener('touchend', end);
+    btn.addEventListener('mousedown', start);
+    btn.addEventListener('mouseup', end);
+    btn.addEventListener('mouseleave', end);
+  });
+
+  // ============================== Audio (simple synthesized blips) ==============================
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+    }
+  }
+
+  function beep(freq, duration, delay = 0, type = 'sine', vol = 0.12) {
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime + delay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(vol, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0); osc.stop(t0 + duration);
+  }
+
+  function playEatSound() { beep(500 + Math.random() * 200, 0.09, 0, 'triangle', 0.1); }
+  function playLevelUpSound() {
+    [0, 0.1, 0.2].forEach((d, i) => beep(500 + i * 160, 0.15, d, 'square', 0.09));
+  }
+  function playWinSound() {
+    [0, 0.15, 0.3, 0.45].forEach((d, i) => beep(400 + i * 120, 0.25, d, 'sawtooth', 0.08));
+  }
+
+  // ============================== Game loop ==============================
+
+  function update(dt) {
+    animT += dt;
+
+    // Speed rises with Kelci's tier (bigger = a bit faster), and riding
+    // Moodeng multiplies that further.
+    let speed = 130 * (1 + tierIndex * 0.15);
+    if (moodeng.mounted) speed *= 1.5;
+
+    let dx = 0, dy = 0;
+    if (keys['arrowup'] || keys['w'] || touchDir === 'up') dy -= 1;
+    if (keys['arrowdown'] || keys['s'] || touchDir === 'down') dy += 1;
+    if (keys['arrowleft'] || keys['a'] || touchDir === 'left') dx -= 1;
+    if (keys['arrowright'] || keys['d'] || touchDir === 'right') dx += 1;
+
+    kelci.moving = dx !== 0 || dy !== 0;
+    if (kelci.moving) {
+      const len = Math.hypot(dx, dy) || 1;
+      dx /= len; dy /= len;
+      if (Math.abs(dx) > Math.abs(dy)) kelci.facing = dx > 0 ? 'right' : 'left';
+      else kelci.facing = dy > 0 ? 'down' : 'up';
+      kelci.walkPhase += dt * 10;
+
+      // Sub-step the movement so a large single-frame displacement (fast
+      // Kelci/Moodeng, or a dt spike from e.g. a tab switch) can't fully
+      // skip past a small object before collision ever sees the overlap —
+      // that's what caused some things to feel like they had no hitbox.
+      const totalDist = speed * dt;
+      const maxStep = 3;
+      const steps = Math.max(1, Math.ceil(totalDist / maxStep));
+      const stepDist = totalDist / steps;
+      for (let i = 0; i < steps; i++) {
+        kelci.x += dx * stepDist;
+        kelci.y += dy * stepDist;
+        kelci.x = Math.max(-LAYOUT_HALF, Math.min(LAYOUT_HALF, kelci.x));
+        kelci.y = Math.max(-LAYOUT_HALF, Math.min(LAYOUT_HALF, kelci.y));
+        pushOutOnce();
+      }
+    }
+
+    updateMoodeng(dt);
+    checkEating();
+    resolveOverlaps();
+    updateParticles(dt);
+
+    const targetZoom = KELCI_SCREEN_RADIUS / kelciRadius();
+    camZoom += (targetZoom - camZoom) * Math.min(1, dt * 4);
+  }
+
+  function updateMoodeng(dt) {
+    if (moodeng.mounted) {
+      moodeng.x = kelci.x;
+      moodeng.y = kelci.y;
+    } else {
+      const fv = facingVector(kelci.facing);
+      const targetX = kelci.x - fv.x * kelciRadius() * 1.3;
+      const targetY = kelci.y - fv.y * kelciRadius() * 1.3;
+      const ease = Math.min(1, dt * 4);
+      moodeng.x += (targetX - moodeng.x) * ease;
+      moodeng.y += (targetY - moodeng.y) * ease;
+    }
+    if (kelci.moving) {
+      if (kelci.facing === 'left') moodeng.facingRight = false;
+      else if (kelci.facing === 'right') moodeng.facingRight = true;
+    }
+  }
+
+  // Single push-out pass against every currently-overlapping obstacle.
+  // Called once per movement sub-step (see update()) to prevent tunneling
+  // through small objects, and a few times in a row by resolveOverlaps()
+  // as a general safety net (e.g. growing via a level-up while already
+  // wedged between two big objects).
+  function pushOutOnce() {
+    const r = kelciRadius();
+    for (const obj of objects) {
+      if (!obj.alive) continue;
+      const orad = obj.isWorld ? TIERS[TIERS.length - 1].radius : obj.species.hit;
+      if (r >= orad) continue; // she can eat it, not a wall
+      const dx = kelci.x - obj.x, dy = kelci.y - obj.y;
+      const d = Math.hypot(dx, dy) || 0.001;
+      const minD = r + orad;
+      if (d < minD) {
+        const push = (minD - d) + 0.5;
+        kelci.x += (dx / d) * push;
+        kelci.y += (dy / d) * push;
+      }
+    }
+  }
+
+  function resolveOverlaps() {
+    for (let iter = 0; iter < 3; iter++) {
+      const bx = kelci.x, by = kelci.y;
+      pushOutOnce();
+      if (kelci.x === bx && kelci.y === by) break;
+    }
+    kelci.x = Math.max(-LAYOUT_HALF, Math.min(LAYOUT_HALF, kelci.x));
+    kelci.y = Math.max(-LAYOUT_HALF, Math.min(LAYOUT_HALF, kelci.y));
+  }
+
+  function checkEating() {
+    const r = kelciRadius();
+    for (const obj of objects) {
+      if (!obj.alive) continue;
+      const orad = obj.isWorld ? TIERS[TIERS.length - 1].radius * 0.5 : obj.species.radius;
+      if (r < orad) continue;
+      const d = Math.hypot(kelci.x - obj.x, kelci.y - obj.y);
+      if (d < r * 0.7 + orad * 0.5) {
+        if (obj.isWorld) {
+          winGame();
+          obj.alive = false;
+          continue;
+        }
+        obj.alive = false;
+        growth += obj.species.growth;
+        spawnParticles(obj.x, obj.y, obj.species.color);
+        playEatSound();
+        maybeLevelUp();
+      }
+    }
+  }
+
+  function maybeLevelUp() {
+    while (tierIndex < TIERS.length - 1 && growth >= TIERS[tierIndex].growthToNext) {
+      growth -= TIERS[tierIndex].growthToNext;
+      tierIndex++;
+      showToast(`Kelci grew! Now: ${TIERS[tierIndex].name}`);
+      playLevelUpSound();
+    }
+  }
+
+  function spawnParticles(x, y, color) {
+    for (let i = 0; i < 6; i++) {
+      particles.push({
+        x, y, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60 - 20,
+        life: 0.5, maxLife: 0.5, color,
+      });
+    }
+  }
+
+  function updateParticles(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      if (p.life <= 0) { particles.splice(i, 1); continue; }
+      p.x += p.vx * dt; p.y += p.vy * dt;
+    }
+  }
+
+  let toastTimer = null;
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  // ============================== Render ==============================
+
+  function render() {
+    const w = world.width, h = world.height;
+    wctx.setTransform(1, 0, 0, 1, 0, 0);
+    wctx.fillStyle = '#6abf5e';
+    wctx.fillRect(0, 0, w, h);
+
+    wctx.setTransform(camZoom, 0, 0, camZoom, w / 2 - kelci.x * camZoom, h / 2 - kelci.y * camZoom);
+    wctx.lineJoin = 'round';
+    wctx.lineCap = 'round';
+
+    drawGrassTexture();
+
+    // world bounds fence (simple)
+    wctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    wctx.lineWidth = 8 / camZoom;
+    wctx.strokeRect(-LAYOUT_HALF, -LAYOUT_HALF, LAYOUT_HALF * 2, LAYOUT_HALF * 2);
+
+    const visible = getVisibleObjects();
+    visible.push({ x: kelci.x, y: kelci.y, isKelci: true });
+    if (!moodeng.mounted) visible.push({ x: moodeng.x, y: moodeng.y, isMoodeng: true });
+    visible.sort((a, b) => a.y - b.y);
+
+    for (const obj of visible) {
+      if (obj.isKelci) {
+        if (moodeng.mounted) {
+          wctx.save();
+          wctx.translate(kelci.x, kelci.y);
+          drawGroundShadow(wctx, moodengRadius());
+          drawMoodeng(wctx, moodengRadius(), moodeng.facingRight);
+          drawFormShading(wctx, moodengRadius());
+          wctx.restore();
+          wctx.save();
+          wctx.translate(kelci.x, kelci.y - moodengRadius() * 0.32);
+          drawKelci(wctx, kelciRadius() * 0.75, kelci.facing, kelci.walkPhase);
+          drawFormShading(wctx, kelciRadius() * 0.75);
+          wctx.restore();
+        } else {
+          wctx.save();
+          wctx.translate(kelci.x, kelci.y);
+          drawGroundShadow(wctx, kelciRadius());
+          drawKelci(wctx, kelciRadius(), kelci.facing, kelci.walkPhase);
+          drawFormShading(wctx, kelciRadius());
+          wctx.restore();
+        }
+        continue;
+      }
+      if (obj.isMoodeng) {
+        wctx.save();
+        wctx.translate(moodeng.x, moodeng.y);
+        drawGroundShadow(wctx, moodengRadius());
+        drawMoodeng(wctx, moodengRadius(), moodeng.facingRight);
+        drawFormShading(wctx, moodengRadius());
+        wctx.restore();
+        continue;
+      }
+      const r = obj.isWorld ? TIERS[TIERS.length - 1].radius : obj.species.radius;
+      if (r * camZoom < 0.6) continue;
+      wctx.save();
+      wctx.translate(obj.x, obj.y);
+      if (obj.isWorld) {
+        drawWorld(wctx, r, animT);
+        drawFormShading(wctx, r);
+      } else {
+        drawGroundShadow(wctx, r);
+        obj.species.draw(wctx, r, obj.seed, animT);
+        drawFormShading(wctx, r);
+      }
+      wctx.restore();
+    }
+
+    for (const p of particles) {
+      wctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+      wctx.fillStyle = p.color;
+      wctx.beginPath(); wctx.arc(p.x, p.y, 4, 0, Math.PI * 2); wctx.fill();
+      wctx.globalAlpha = 1;
+    }
+
+    drawVignette(w, h);
+    renderMinimap();
+    renderHud();
+  }
+
+  // Subtle screen-space vignette for a bit of cinematic polish, drawn last
+  // (identity transform, over everything) so its darkening stays a fixed
+  // proportion of the viewport regardless of zoom level.
+  function drawVignette(w, h) {
+    wctx.setTransform(1, 0, 0, 1, 0, 0);
+    const grad = wctx.createRadialGradient(
+      w / 2, h / 2, Math.min(w, h) * 0.35,
+      w / 2, h / 2, Math.max(w, h) * 0.72
+    );
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(10,15,10,0.22)');
+    wctx.fillStyle = grad;
+    wctx.fillRect(0, 0, w, h);
+  }
+
+  // Cull by each object's own radius, not a flat margin — a flat margin
+  // (e.g. 60 units) is fine for small objects but chops big ones (a
+  // mountain, a hangar, a castle) off abruptly the instant their *center*
+  // crosses the boundary, instead of letting them slide partially into
+  // view/out of view like everything else at the edge of the screen.
+  function getVisibleObjects() {
+    const w = world.width, h = world.height;
+    const halfViewX = (w / 2) / camZoom;
+    const halfViewY = (h / 2) / camZoom;
+    const result = [];
+    for (const obj of objects) {
+      if (!obj.alive) continue;
+      const r = obj.isWorld ? TIERS[TIERS.length - 1].radius : obj.species.radius;
+      if (Math.abs(obj.x - kelci.x) > halfViewX + r) continue;
+      if (Math.abs(obj.y - kelci.y) > halfViewY + r) continue;
+      result.push(obj);
+    }
+    return result;
+  }
+
+  function drawGrassTexture() {
+    if (camZoom < 0.15) return; // too zoomed out for texture to matter / to be cheap
+    const w = world.width, h = world.height;
+    const viewL = kelci.x - (w / 2) / camZoom, viewR = kelci.x + (w / 2) / camZoom;
+    const viewT = kelci.y - (h / 2) / camZoom, viewB = kelci.y + (h / 2) / camZoom;
+    const cell = 120;
+    const startX = Math.floor(viewL / cell) * cell;
+    const startY = Math.floor(viewT / cell) * cell;
+    wctx.fillStyle = 'rgba(0,0,0,0.05)';
+    for (let x = startX; x < viewR; x += cell) {
+      for (let y = startY; y < viewB; y += cell) {
+        if (((x / cell + y / cell) | 0) % 2 === 0) wctx.fillRect(x, y, cell, cell);
+      }
+    }
+  }
+
+  function renderMinimap() {
+    const size = minimap.width;
+    mctx.clearRect(0, 0, size, size);
+    const scale = size / (LAYOUT_HALF * 2.2);
+    const toMap = (x, y) => [size / 2 + x * scale, size / 2 + y * scale];
+
+    mctx.strokeStyle = '#41403c'; mctx.lineWidth = 1;
+    mctx.strokeRect(...toMap(-LAYOUT_HALF, -LAYOUT_HALF), LAYOUT_HALF * 2 * scale, LAYOUT_HALF * 2 * scale);
+
+    for (const obj of objects) {
+      if (!obj.alive || obj.isWorld) continue;
+      if (obj.species.radius < 20) continue;
+      const [mx, my] = toMap(obj.x, obj.y);
+      mctx.fillStyle = obj.species.color;
+      mctx.fillRect(mx - 1, my - 1, 2, 2);
+    }
+
+    const [wx, wy] = toMap(WORLD_POS.x, WORLD_POS.y);
+    const pulse = 3 + Math.sin(animT * 3) * 1.2;
+    mctx.fillStyle = '#ffd23f'; mctx.strokeStyle = '#a85f13'; mctx.lineWidth = 1;
+    mctx.beginPath(); mctx.arc(wx, wy, pulse, 0, Math.PI * 2); mctx.fill(); mctx.stroke();
+
+    const [kx, ky] = toMap(kelci.x, kelci.y);
+    mctx.fillStyle = '#4fc3e0'; mctx.strokeStyle = '#41403c';
+    mctx.beginPath(); mctx.arc(kx, ky, 3.5, 0, Math.PI * 2); mctx.fill(); mctx.stroke();
+  }
+
+  function renderHud() {
+    document.getElementById('tierName').textContent = TIERS[tierIndex].name;
+    const need = TIERS[tierIndex].growthToNext;
+    const pct = need === Infinity ? 100 : Math.min(100, (growth / need) * 100);
+    document.getElementById('growthBar').style.width = pct + '%';
+    document.getElementById('statLine').textContent = `Size: ${kelciRadius()}`;
+    renderMoodengButton();
+  }
+
+  function renderMoodengButton() {
+    const btn = document.getElementById('moodengBtn');
+    if (!moodeng) return;
+    btn.textContent = moodeng.mounted ? 'Get Off Moodeng (M)' : 'Ride Moodeng (M)';
+    btn.classList.toggle('mounted', moodeng.mounted);
+  }
+
+  // ============================== Main loop / lifecycle ==============================
+
+  function loop(t) {
+    if (!running) return;
+    const dt = Math.min(0.05, (t - lastTime) / 1000 || 0);
+    lastTime = t;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function startGame() {
+    ensureAudio();
+    if (!world) initGameCanvases();
+    resetState();
+    showScreen('game');
+    running = true;
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+  }
+
+  function stopGame() {
+    running = false;
+  }
+
+  function winGame() {
+    stopGame();
+    playWinSound();
+    document.getElementById('winModal').classList.remove('hidden');
+  }
+
+  // ============================== Screens ==============================
+
+  function showScreen(name) {
+    document.getElementById('introScreen').classList.toggle('hidden', name !== 'intro');
+    document.getElementById('instructionsScreen').classList.toggle('hidden', name !== 'instructions');
+    document.getElementById('gameScreen').classList.toggle('hidden', name !== 'game');
+  }
+
+  document.getElementById('btnPlay').addEventListener('click', startGame);
+  document.getElementById('btnInstructionsPlay').addEventListener('click', startGame);
+  document.getElementById('btnHowTo').addEventListener('click', () => showScreen('instructions'));
+  document.getElementById('btnInstructionsBack').addEventListener('click', () => showScreen('intro'));
+
+  document.getElementById('exitBtn').addEventListener('click', () => {
+    document.getElementById('exitConfirm').classList.remove('hidden');
+  });
+  document.getElementById('exitNo').addEventListener('click', () => {
+    document.getElementById('exitConfirm').classList.add('hidden');
+  });
+  document.getElementById('exitYes').addEventListener('click', () => {
+    document.getElementById('exitConfirm').classList.add('hidden');
+    stopGame();
+    showScreen('intro');
+  });
+
+  document.getElementById('playAgainBtn').addEventListener('click', () => {
+    document.getElementById('winModal').classList.add('hidden');
+    startGame();
+  });
+
+  showScreen('intro');
+})();
+</script>
+</body>
+</html>
